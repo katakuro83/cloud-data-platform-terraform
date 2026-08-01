@@ -4,7 +4,6 @@ Fully reproducible cloud data platform warehouse, storage, IAM, and networking d
 
 **Stack:** Terraform · AWS · GitHub Actions
 
-> Implemented against AWS as the primary provider. The module boundaries (`networking` / `storage` / `iam` / `warehouse`) are deliberately provider agnostic in *design*.
 ---
 
 ## Architecture

@@ -1,0 +1,57 @@
+# Architecture Deep Dive
+
+## Why Modules + Environments, Not One Big Config
+
+A single flat Terraform config that provisions everything for every environment inevitably drifts: someone tweaks `prod` directly "just this once," and now `dev` and `prod` are structurally different, not just differently sized. This project splits into:
+
+- **`modules/`** reusable, environment agnostic building blocks. A module takes inputs (sizing, CIDR ranges, tags) and exposes outputs (IDs, ARNs) it has no opinion about which environment is calling it.
+- **`environments/dev` and `environments/prod`** thin composition roots. Each one is just "call these four modules with these specific variables." The *architecture* is defined once, in the modules; only *scale* varies per environment.
+
+This means a change to how S3 buckets are configured (e.g., adding a new lifecycle rule) happens in one place (`modules/storage`) and applies consistently everywhere once each environment's `main.tf` is re applied no risk of `dev` and `prod` silently diverging in structure.
+
+## Remote State & Locking
+
+Terraform state is stored in S3 (versioned, encrypted) with locking via DynamoDB, provisioned once by `bootstrap/`. This is intentionally the *only* piece of infrastructure not managed by the main environments state storage has to exist before Terraform has anywhere to store state, so it's bootstrapped separately, then never touched again.
+
+Each environment uses a distinct state key (`env:/dev/...` vs `env:/prod/...`), so `terraform apply` in `dev` physically cannot affect `prod` resources — they're tracked in completely separate state files.
+
+## Networking: Why the Warehouse Sits in Private Subnets
+
+The Redshift Serverless workgroup is deployed into private subnets with no public route. Data engineers connect via a bastion/VPN or through a peered VPC the warehouse itself is never internet addressable. Public subnets exist only for the NAT gateway (outbound internet for things like package installs on any compute in private subnets), not for inbound access.
+
+## IAM: Persona Based, Not Resource Based
+
+Rather than one broad "data team" role, `modules/iam` defines roles per persona:
+
+- **`data engineer`** read/write on both `raw` and `curated` S3 prefixes, `redshift serverless:GetCredentials` scoped to specific database users
+- **`data reader`** read only on `curated` only (no access to `raw`, which may contain unprocessed/unmasked data)
+- **Warehouse service role** the role Redshift itself assumes to read from S3 (`COPY`/`UNLOAD`), scoped only to the specific buckets it needs
+
+This means a compromised analyst credential can't reach raw data or write anywhere, and a compromised engineer credential still can't touch IAM itself (no self privilege escalation path).
+
+## CI/CD: Plan on PR, Apply on Merge
+
+```
+PR opened/updated  ──►  terraform-plan.yml  ──►  plan posted as PR comment  ──►  human review
+        │
+        ▼
+  merge to main     ──►  terraform-apply.yml  ──►  terraform apply (prod)
+```
+
+The plan output being posted directly on the PR means reviewers see *exactly* what will change (resources created/modified/destroyed) before approving not just a diff of `.tf` files, which can hide the actual infrastructure impact of a seemingly small change (e.g., a variable rename that forces resource replacement).
+
+### Why OIDC instead of access keys
+GitHub Actions authenticates to AWS by assuming an IAM role via OpenID Connect GitHub issues a short lived, workflow scoped token that AWS trusts directly. There's no `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` stored as a repo secret at all, which removes an entire class of credential-leak risk (long lived keys accidentally logged, cached, or exfiltrated from a compromised action).
+
+## Porting to Azure
+
+Each module's *inputs and outputs* are the contract; the *provider resources inside* are what would change for an Azure port:
+
+| Module | AWS resource | Azure equivalent |
+|---|---|---|
+| `networking` | VPC, subnets, NAT Gateway | Virtual Network, Subnets, NAT Gateway |
+| `storage` | S3 buckets | Azure Data Lake Storage Gen2 (ADLS) containers |
+| `iam` | IAM roles/policies | Azure AD roles + RBAC assignments |
+| `warehouse` | Redshift Serverless | Azure Synapse Analytics (dedicated SQL pool) or Microsoft Fabric warehouse |
+
+A multi-cloud variant would add `modules/*azure` siblings with the same variable names/outputs, and an environment `main.tf` would select which set to call via a `cloud_provider` variable the composition root pattern already supports this without redesigning anything.

@@ -1,4 +1,4 @@
-Environments dev and prod composition roots
+Environments/dev and environments/prod thin composition roots wiring the modules together with separate state files, separate CIDR ranges, and different warehouse sizing
 
 Dev environment backend config
 

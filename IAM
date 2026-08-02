@@ -1,3 +1,5 @@
+IAM three persona scoped roles (data engineer, data reader, warehouse service role), each with only the exact S3/KMS actions it needs no wildcards
+
 IAM module main.tf persona based least privilege roles
 
 IAM module variables

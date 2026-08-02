@@ -1,3 +1,5 @@
+Storage raw/curated S3 buckets, KMS encryption, versioning, and layer appropriate lifecycle rules (raw keeps history longer than curated)
+
 Storage module main.tf
 
 Storage module variables

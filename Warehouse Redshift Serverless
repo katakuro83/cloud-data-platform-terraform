@@ -1,0 +1,7 @@
+Warehouse Redshift Serverless namespace + workgroup, deployed privately into the VPC
+
+Warehouse module main.tf Redshift Serverless
+
+Warehouse module variables
+
+Warehouse module outputs

@@ -1,0 +1,11 @@
+Environments dev and prod composition roots
+
+Dev environment backend config
+
+Dev environment main.tf composing all modules
+
+Dev environment variables
+
+Dev environment outputs
+
+Dev environment example tfvars

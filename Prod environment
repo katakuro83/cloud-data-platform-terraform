@@ -1,0 +1,60 @@
+Environment (mirrors dev, with production appropriate settings)
+
+Prod environment backend config
+
+Prod environment main.tf composing all modules with prod sized settings
+
+Prod environment variables
+
+Add prod outputs and tfvars example
+bash
+
+cat > /home/cloud-data-platform-terraform/environments/prod/outputs.tf << 'EOF'
+output "vpc_id" {
+  value = module.networking.vpc_id
+}
+
+output "bucket_names" {
+
+
+Add prod outputs and tfvars example
+bash
+
+cat > /home/cloud-data-platform-terraform/environments/prod/outputs.tf << 'EOF'
+output "vpc_id" {
+  value = module.networking.vpc_id
+}
+
+output "bucket_names" {
+  value = module.storage.bucket_names
+}
+
+output "warehouse_endpoint" {
+  value = module.warehouse.workgroup_endpoint
+}
+
+output "data_engineer_role_arn" {
+  value = module.iam.data_engineer_role_arn
+}
+
+output "data_reader_role_arn" {
+  value = module.iam.data_reader_role_arn
+}
+EOF
+
+cat > /home/cloud-data-platform-terraform/environments/prod/terraform.tfvars.example << 'EOF'
+# Copy to terraform.tfvars and fill in real values.
+# In practice, prod secrets should come from a secrets manager /
+# CI secret store, not a checked-in tfvars file at all.
+
+aws_region     = "eu-central-1"
+account_suffix = "123456789012"
+
+warehouse_admin_password    = "CHANGE_ME_use_a_secrets_manager_in_practice"
+warehouse_base_capacity_rpu = 32
+EOF
+
+echo done
+Output
+
+done

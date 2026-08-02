@@ -1,1 +1,2 @@
 Bootstrap Terraform config for remote state backend
+bootstrap/ one time setup: S3 state bucket + DynamoDB lock table, plus the GitHub OIDC provider/role so CI never uses static AWS keys

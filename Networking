@@ -1,3 +1,5 @@
+Networking VPC, public/private subnets, NAT gateway, a security group scoped to VPC internal traffic only
+
 Networking module main.tf
 
 Networking module variables
